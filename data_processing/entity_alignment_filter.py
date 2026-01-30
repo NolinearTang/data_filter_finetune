@@ -1,5 +1,6 @@
 import json
 import re
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import List, Dict
 
 
@@ -140,43 +141,49 @@ def filter_aligned_pairs(input_file: str, output_file: str, llm, batch_size: int
     unaligned_pairs = []
     
     print(f"\n开始处理 {len(data)} 条数据...")
-    
-    for idx, pair in enumerate(data):
-        question = pair['question']
-        chunk = pair['chunk']
-        
-        print(f"\n处理第 {idx + 1}/{len(data)} 条...")
-        print(f"Question: {question[:50]}...")
-        print(f"Chunk: {chunk[:50]}...")
-        
-        try:
-            result = check_entity_alignment(question, chunk, llm)
-            
-            if result['is_aligned']:
-                aligned_pairs.append({
-                    'question': question,
-                    'chunk': chunk,
-                    'llm_analysis': result['llm_response']
-                })
-                print("✓ 对齐")
-            else:
+
+    completed = 0
+    with ThreadPoolExecutor(max_workers=5) as executor:
+        future_to_meta = {}
+        for idx, pair in enumerate(data):
+            question = pair['question']
+            chunk = pair['chunk']
+            future = executor.submit(check_entity_alignment, question, chunk, llm)
+            future_to_meta[future] = (idx, question, chunk)
+
+        for future in as_completed(future_to_meta):
+            idx, question, chunk = future_to_meta[future]
+            print(f"\n处理第 {idx + 1}/{len(data)} 条...")
+            print(f"Question: {question[:50]}...")
+            print(f"Chunk: {chunk[:50]}...")
+
+            try:
+                result = future.result()
+                if result['is_aligned']:
+                    aligned_pairs.append({
+                        'question': question,
+                        'chunk': chunk,
+                        'llm_analysis': result['llm_response']
+                    })
+                    print("✓ 对齐")
+                else:
+                    unaligned_pairs.append({
+                        'question': question,
+                        'chunk': chunk,
+                        'llm_analysis': result['llm_response']
+                    })
+                    print("✗ 不对齐")
+            except Exception as e:
+                print(f"处理出错: {e}")
                 unaligned_pairs.append({
                     'question': question,
                     'chunk': chunk,
-                    'llm_analysis': result['llm_response']
+                    'error': str(e)
                 })
-                print("✗ 不对齐")
-            
-            if (idx + 1) % batch_size == 0:
-                print(f"\n已处理 {idx + 1} 条，当前对齐: {len(aligned_pairs)}, 不对齐: {len(unaligned_pairs)}")
-                
-        except Exception as e:
-            print(f"处理出错: {e}")
-            unaligned_pairs.append({
-                'question': question,
-                'chunk': chunk,
-                'error': str(e)
-            })
+
+            completed += 1
+            if completed % batch_size == 0:
+                print(f"\n已处理 {completed} 条，当前对齐: {len(aligned_pairs)}, 不对齐: {len(unaligned_pairs)}")
     
     print(f"\n处理完成！")
     print(f"对齐数据: {len(aligned_pairs)} 条")
