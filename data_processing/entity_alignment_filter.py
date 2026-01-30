@@ -1,6 +1,6 @@
 import json
 import re
-from concurrent.futures import ThreadPoolExecutor, as_completed
+import asyncio
 from typing import List, Dict
 
 
@@ -83,14 +83,14 @@ def load_question_chunk_pairs(json_file: str) -> List[Dict]:
     return data
 
 
-def check_entity_alignment(question: str, chunk: str, llm) -> Dict:
+async def check_entity_alignment(question: str, chunk: str, llm) -> Dict:
     """
-    使用LLM检查question和chunk的实体对齐情况
+    使用LLM检查question和chunk的实体对齐情况（异步版本）
     
     Args:
         question: 问题文本
         chunk: 文本块
-        llm: LLM对象，需要有do_llm方法
+        llm: LLM对象，需要有do_llm协程方法
         
     Returns:
         包含对齐结果的字典
@@ -102,7 +102,7 @@ def check_entity_alignment(question: str, chunk: str, llm) -> Dict:
     
     system_input = ""
     
-    response = llm.do_llm(
+    response = await llm.do_llm(
         user_input=user_input,
         system_input=system_input,
         system_prompt=SYSTEM_PROMPT
@@ -125,15 +125,15 @@ def check_entity_alignment(question: str, chunk: str, llm) -> Dict:
     }
 
 
-def filter_aligned_pairs(input_file: str, output_file: str, llm, batch_size: int = 10):
+async def filter_aligned_pairs(input_file: str, output_file: str, llm, batch_size: int = 10):
     """
-    过滤出实体对齐的question-chunk对
+    过滤出实体对齐的question-chunk对（异步版本，最多5并发）
     
     Args:
         input_file: 输入JSON文件路径
         output_file: 输出JSON文件路径
-        llm: LLM对象
-        batch_size: 每处理多少条数据保存一次
+        llm: LLM对象（需要支持异步do_llm方法）
+        batch_size: 每处理多少条数据打印一次进度
     """
     data = load_question_chunk_pairs(input_file)
     
@@ -142,23 +142,21 @@ def filter_aligned_pairs(input_file: str, output_file: str, llm, batch_size: int
     
     print(f"\n开始处理 {len(data)} 条数据...")
 
+    semaphore = asyncio.Semaphore(5)  # 限制并发数为5
     completed = 0
-    with ThreadPoolExecutor(max_workers=5) as executor:
-        future_to_meta = {}
-        for idx, pair in enumerate(data):
-            question = pair['question']
-            chunk = pair['chunk']
-            future = executor.submit(check_entity_alignment, question, chunk, llm)
-            future_to_meta[future] = (idx, question, chunk)
-
-        for future in as_completed(future_to_meta):
-            idx, question, chunk = future_to_meta[future]
+    
+    async def process_one(idx: int, pair: Dict):
+        nonlocal completed
+        question = pair['question']
+        chunk = pair['chunk']
+        
+        async with semaphore:
             print(f"\n处理第 {idx + 1}/{len(data)} 条...")
             print(f"Question: {question[:50]}...")
             print(f"Chunk: {chunk[:50]}...")
-
+            
             try:
-                result = future.result()
+                result = await check_entity_alignment(question, chunk, llm)
                 if result['is_aligned']:
                     aligned_pairs.append({
                         'question': question,
@@ -180,10 +178,14 @@ def filter_aligned_pairs(input_file: str, output_file: str, llm, batch_size: int
                     'chunk': chunk,
                     'error': str(e)
                 })
-
+            
             completed += 1
             if completed % batch_size == 0:
                 print(f"\n已处理 {completed} 条，当前对齐: {len(aligned_pairs)}, 不对齐: {len(unaligned_pairs)}")
+    
+    # 创建所有任务并并发执行
+    tasks = [process_one(idx, pair) for idx, pair in enumerate(data)]
+    await asyncio.gather(*tasks)
     
     print(f"\n处理完成！")
     print(f"对齐数据: {len(aligned_pairs)} 条")
@@ -205,7 +207,9 @@ def filter_aligned_pairs(input_file: str, output_file: str, llm, batch_size: int
 if __name__ == '__main__':
     class MockLLM:
         """示例LLM类，实际使用时替换为真实的LLM"""
-        def do_llm(self, user_input, system_input, system_prompt):
+        async def do_llm(self, user_input, system_input, system_prompt):
+            # 模拟异步调用
+            await asyncio.sleep(0.1)
             return "示例响应：对齐"
     
     llm = MockLLM()
@@ -213,4 +217,4 @@ if __name__ == '__main__':
     input_file = 'output.json'
     output_file = 'filtered_aligned.json'
     
-    filter_aligned_pairs(input_file, output_file, llm)
+    asyncio.run(filter_aligned_pairs(input_file, output_file, llm))
