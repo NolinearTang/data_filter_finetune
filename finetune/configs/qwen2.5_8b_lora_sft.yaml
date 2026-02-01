@@ -1,5 +1,5 @@
 ### model
-model_name_or_path: Qwen/Qwen2.5-8B-Instruct
+model_name_or_path: Qwen/Qwen2.5-3-8B-Instruct
 
 ### method
 stage: sft
@@ -16,7 +16,7 @@ overwrite_cache: true
 preprocessing_num_workers: 16
 
 ### output
-output_dir: saves/qwen2.5-8b-entity-alignment
+output_dir: saves/qwen3-8b-entity-alignment
 logging_steps: 10
 save_steps: 500
 plot_loss: true

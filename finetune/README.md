@@ -1,6 +1,6 @@
 # 实体对齐判断模型微调
 
-使用 LLaMAFactory 微调 Qwen2.5 8B 模型，训练实体对齐判断任务。模型使用**思考模型**格式，将中间推理过程放在 `<think>` 标签中，最终答案为 "对齐" 或 "不对齐"。
+使用 LLaMAFactory 微调 Qwen3 8B 模型（Qwen2.5-3-8B-Instruct），训练实体对齐判断任务。模型使用**思考模型**格式，将中间推理过程放在 `<think>` 标签中，最终答案为 "对齐" 或 "不对齐"。
 
 ---
 
@@ -136,7 +136,7 @@ llamafactory-cli train \
 ### 模型配置（qwen2.5_8b_lora_sft.yaml）
 
 ```yaml
-model_name_or_path: Qwen/Qwen2.5-8B-Instruct  # 基座模型
+model_name_or_path: Qwen/Qwen2.5-3-8B-Instruct  # 基座模型（Qwen3 8B）
 stage: sft                                     # 监督微调
 finetuning_type: lora                          # LoRA 微调
 lora_target: all                               # 对所有层应用 LoRA
@@ -172,11 +172,11 @@ eval_steps: 500                                # 每500步评估一次
 
 ```bash
 llamafactory-cli export \
-    --model_name_or_path Qwen/Qwen2.5-8B-Instruct \
-    --adapter_name_or_path saves/qwen2.5-8b-entity-alignment \
+    --model_name_or_path Qwen/Qwen2.5-3-8B-Instruct \
+    --adapter_name_or_path saves/qwen3-8b-entity-alignment \
     --template qwen \
     --finetuning_type lora \
-    --export_dir models/qwen2.5-8b-entity-alignment-merged \
+    --export_dir models/qwen3-8b-entity-alignment-merged \
     --export_size 2 \
     --export_device cpu
 ```
@@ -187,7 +187,7 @@ llamafactory-cli export \
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
 # 加载模型
-model_path = "models/qwen2.5-8b-entity-alignment-merged"
+model_path = "models/qwen3-8b-entity-alignment-merged"
 tokenizer = AutoTokenizer.from_pretrained(model_path)
 model = AutoModelForCausalLM.from_pretrained(
     model_path,
@@ -306,7 +306,7 @@ python -m vllm.entrypoints.openai.api_server \
 ## 参考资源
 
 - [LLaMAFactory 官方文档](https://github.com/hiyouga/LLaMA-Factory)
-- [Qwen2.5 模型文档](https://github.com/QwenLM/Qwen2.5)
+- [Qwen3 模型文档](https://github.com/QwenLM/Qwen2.5)
 - [LoRA 论文](https://arxiv.org/abs/2106.09685)
 - [思考模型训练方法](https://openai.com/research/learning-to-reason-with-llms)
 
@@ -316,7 +316,7 @@ python -m vllm.entrypoints.openai.api_server \
 
 通过本微调流程，你可以：
 - ✅ 将 LLM 的推理过程转化为训练数据
-- ✅ 训练一个具有思考能力的 Qwen2.5 8B 模型
+- ✅ 训练一个具有思考能力的 Qwen3 8B 模型
 - ✅ 在实体对齐判断任务上达到高准确率
 - ✅ 获得可解释的模型输出
 

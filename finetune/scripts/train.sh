@@ -31,4 +31,4 @@ llamafactory-cli train \
     --dataset_info "$DATASET_INFO"
 
 echo "训练完成！"
-echo "模型保存在: saves/qwen2.5-8b-entity-alignment"
+echo "模型保存在: saves/qwen3-8b-entity-alignment"
