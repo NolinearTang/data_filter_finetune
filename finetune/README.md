@@ -1,6 +1,6 @@
 # 实体对齐判断模型微调
 
-使用 LLaMAFactory 微调 Qwen3 8B 模型（Qwen2.5-3-8B-Instruct），训练实体对齐判断任务。模型使用**思考模型**格式，将中间推理过程放在 `<think>` 标签中，最终答案为 "对齐" 或 "不对齐"。
+使用 LLaMAFactory 微调 Qwen3 8B 模型，训练实体对齐判断任务。模型使用**思考模型**格式，将中间推理过程放在 `<think>` 标签中，最终答案为 "对齐" 或 "不对齐"。
 
 ---
 
@@ -13,7 +13,7 @@ finetune/
 │   └── entity_alignment_train.json    # 转换后的训练数据
 ├── configs/                           # 配置文件
 │   ├── dataset_info.json              # LLaMAFactory 数据集配置
-│   └── qwen2.5_8b_lora_sft.yaml       # 微调配置（LoRA SFT）
+│   └── qwen3_8b_lora_sft.yaml         # 微调配置（LoRA SFT）
 └── scripts/                           # 脚本
     ├── convert_to_llamafactory.py     # 数据格式转换脚本
     └── train.sh                       # 训练启动脚本
@@ -81,7 +81,7 @@ chmod +x train.sh
 cd LLaMA-Factory
 
 llamafactory-cli train \
-    --config_file ../finetune/configs/qwen2.5_8b_lora_sft.yaml \
+    --config_file ../finetune/configs/qwen3_8b_lora_sft.yaml \
     --dataset_dir ../finetune/data \
     --dataset_info ../finetune/configs/dataset_info.json
 ```
@@ -133,10 +133,10 @@ llamafactory-cli train \
 
 ## 训练配置说明
 
-### 模型配置（qwen2.5_8b_lora_sft.yaml）
+### 模型配置（qwen3_8b_lora_sft.yaml）
 
 ```yaml
-model_name_or_path: Qwen/Qwen2.5-3-8B-Instruct  # 基座模型（Qwen3 8B）
+model_name_or_path: Qwen/Qwen3-8B-Instruct  # 基座模型
 stage: sft                                     # 监督微调
 finetuning_type: lora                          # LoRA 微调
 lora_target: all                               # 对所有层应用 LoRA
@@ -172,7 +172,7 @@ eval_steps: 500                                # 每500步评估一次
 
 ```bash
 llamafactory-cli export \
-    --model_name_or_path Qwen/Qwen2.5-3-8B-Instruct \
+    --model_name_or_path Qwen/Qwen3-8B-Instruct \
     --adapter_name_or_path saves/qwen3-8b-entity-alignment \
     --template qwen \
     --finetuning_type lora \
@@ -277,7 +277,7 @@ quantization_bit: 4  # 4-bit 量化
 
 **方案3**：使用 DeepSpeed ZeRO
 ```bash
-deepspeed --num_gpus=2 train.py --config qwen2.5_8b_lora_sft.yaml --deepspeed ds_config.json
+deepspeed --num_gpus=2 train.py --config qwen3_8b_lora_sft.yaml --deepspeed ds_config.json
 ```
 
 ### Q2: 如何提高模型准确率？
@@ -296,7 +296,7 @@ deepspeed --num_gpus=2 train.py --config qwen2.5_8b_lora_sft.yaml --deepspeed ds
 pip install vllm
 
 python -m vllm.entrypoints.openai.api_server \
-    --model models/qwen2.5-8b-entity-alignment-merged \
+    --model models/qwen3-8b-entity-alignment-merged \
     --served-model-name entity-alignment \
     --port 8000
 ```
@@ -306,7 +306,7 @@ python -m vllm.entrypoints.openai.api_server \
 ## 参考资源
 
 - [LLaMAFactory 官方文档](https://github.com/hiyouga/LLaMA-Factory)
-- [Qwen3 模型文档](https://github.com/QwenLM/Qwen2.5)
+- [Qwen3 模型文档](https://github.com/QwenLM/Qwen)
 - [LoRA 论文](https://arxiv.org/abs/2106.09685)
 - [思考模型训练方法](https://openai.com/research/learning-to-reason-with-llms)
 

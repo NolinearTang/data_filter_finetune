@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# LLaMAFactory 微调脚本 - Qwen2.5 8B LoRA SFT
+# LLaMAFactory 微调脚本 - Qwen3 8B LoRA SFT
 # 使用思考模型格式训练实体对齐判断任务
 
 # 设置 LLaMAFactory 路径（请根据实际情况修改）
@@ -26,7 +26,7 @@ echo "数据集配置: $DATASET_INFO"
 
 # 运行训练
 llamafactory-cli train \
-    --config_file "$(dirname "$(dirname "$(pwd)")")/finetune/configs/qwen2.5_8b_lora_sft.yaml" \
+    --config_file "$(dirname "$(dirname "$(pwd)")")/finetune/configs/qwen3_8b_lora_sft.yaml" \
     --dataset_dir "$DATA_DIR" \
     --dataset_info "$DATASET_INFO"
 
